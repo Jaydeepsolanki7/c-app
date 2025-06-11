@@ -93,10 +93,3 @@ jobs:
       - store_artifacts:
           path: /tmp/test-results
           destination: test-results
-
-      # Upload coverage to Code Climate
-      - run:
-          name: Upload coverage results to Code Climate
-          command: |
-            ./tmp/cc-test-reporter format-coverage -t simplecov coverage/.resultset.json
-            ./tmp/cc-test-reporter upload-coverage
