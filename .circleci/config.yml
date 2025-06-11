@@ -28,7 +28,7 @@ jobs:
           command: |
             echo 'export BUNDLER_VERSION=$(cat Gemfile.lock | tail -1 | tr -d " ")' >> $BASH_ENV
             source $BASH_ENV
-            gem install bundler
+            gem install bundler -v 2.4.22
       # Yarn install
       - run:
           name: Yarn install
@@ -37,7 +37,7 @@ jobs:
       # Bundle install
       - run:
           name: Bundle install
-          command: bundle install
+          command: bundle install --jobs 3 --retry 3
 
       # Store bundle cache
       - save_cache:
