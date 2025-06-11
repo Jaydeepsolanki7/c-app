@@ -4,18 +4,18 @@ jobs:
   build:
     working_directory: ~/app
     docker:
-      - image: circleci/ruby:2.7.3-node
+      - image: cimg/ruby:3.2.2-node
         environment:
           BUNDLE_JOBS: 3
           BUNDLE_PATH: vendor/bundle
           BUNDLE_RETRY: 3
-          BUNDLER_VERSION: 2.2.3
           RAILS_ENV: test
           CC_TEST_REPORTER_ID: $CC_TEST_REPORTER_ID
           RAILS_MASTER_KEY: $RAILS_MASTER_KEY
-      - image: circleci/postgres:13.2
+      - image: cimg/postgres:13.2
         environment:
           POSTGRES_PASSWORD: password
+
     steps:
       - checkout
 
@@ -23,13 +23,13 @@ jobs:
       - restore_cache:
           key: app-{{ checksum "Gemfile.lock" }}
 
+      # Install bundler version compatible with Ruby 3.2.2 (optional if already in Gemfile.lock)
       - run:
-          name: Configure bundler
+          name: Install correct Bundler
           command: |
-            echo 'export BUNDLER_VERSION=$(cat Gemfile.lock | tail -1 | tr -d " ")' >> $BASH_ENV
-            source $BASH_ENV
             gem install bundler -v 2.4.22
-      # Yarn install
+
+      # Yarn install (if you use Yarn for JS deps)
       - run:
           name: Yarn install
           command: yarn install
@@ -45,35 +45,38 @@ jobs:
           paths:
             - vendor/bundle
 
-      # Wait for postgres
+      # Wait for Postgres to be ready
       - run:
           name: Wait for postgres
           command: dockerize -wait tcp://localhost:5432 -timeout 1m
 
-      # Config database
+      # Setup database config (you can also use ENV vars or checked-in config if preferred)
       - run:
           name: Config database
-          environment:
-            - RAILS_ENV: test
           command: |
             echo 'test:
               adapter: postgresql
-              database: c_app_dev
-              username: jaydeep
-              password: Neversettle@1234
+              encoding: unicode
+              database: c_app_test
+              username: postgres
+              password: password
               host: localhost
             ' > config/database.yml
+
+      # Setup database
       - run:
           name: Setup Database
           command: bundle exec rake db:create db:schema:load --trace
 
-      # Rspec
+      # Setup Code Climate test reporter
       - run:
           name: Setup Code Climate Test Reporter
           command: |
             mkdir -p tmp/
             curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./tmp/cc-test-reporter
             chmod +x ./tmp/cc-test-reporter
+
+      # Run RSpec tests
       - run:
           name: Run RSpec
           command: |
@@ -84,6 +87,7 @@ jobs:
                               $(circleci tests glob "spec/**/*_spec.rb" | circleci tests split --split-by=timings)
           when: always
 
+      # Store test results
       - store_test_results:
           path: /tmp/test-results
 
@@ -91,8 +95,9 @@ jobs:
           path: /tmp/test-results
           destination: test-results
 
+      # Upload coverage to Code Climate
       - run:
           name: Upload coverage results to Code Climate
           command: |
-            ./tmp/cc-test-reporter format-coverage -t simplecov $CIRCLE_ARTIFACTS/coverage/.resultset.json
+            ./tmp/cc-test-reporter format-coverage -t simplecov coverage/.resultset.json
             ./tmp/cc-test-reporter upload-coverage
