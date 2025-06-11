@@ -1,0 +1,28 @@
+# config/database.yml
+
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: 5
+
+development:
+  <<: *default
+  database: c_app_dev
+
+  username: jaydeep
+  password: Neversettle@1234
+  host: localhost
+
+test:
+  <<: *default
+  database: c_app_test
+  username: jaydeep
+  password: Neversettle@1234
+  host: localhost
+
+production:
+  <<: *default
+  database: c_app_prod
+  username: jaydeep
+  password: Neversettle@1234
+  host: localhost
